@@ -1,47 +1,32 @@
 """
-Módulo de captura de cámara con detección y selección automática de índice.
+Módulo de captura de cámara optimizado para hardware liviano.
 """
 
+import os
 import cv2
 import numpy as np
 
 
 class Camera:
-    def __init__(self, index: int = None):
-        """
-        Si index es None, busca automáticamente el primer puerto de cámara válido.
-        Si se pasa un entero, intenta usar ese índice específico.
-        """
-        if index is not None:
-            self.cap = cv2.VideoCapture(index)
-            self.index = index
-        else:
-            self.cap, self.index = self._find_working_camera()
+    def __init__(self, index: int = 1, width: int = 640, height: int = 480):
+        self.index = index
+        self.cap = cv2.VideoCapture(self.index)
 
-        if not self.cap or not self.cap.isOpened():
-            raise RuntimeError(
-                f"No se pudo abrir ninguna cámara. "
-                f"Sugerencia: verificá permisos de Linux ('sudo usermod -aG video $USER') o la conexión USB."
-            )
+        if not self.cap.isOpened():
+            raise RuntimeError(f"No se pudo abrir la webcam en /dev/video{self.index}")
 
-        print(f"[Camera] Conectado exitosamente a la cámara en /dev/video{self.index}")
+        # Configura resolución de trabajo liviana para el procesador
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
-    def _find_working_camera(self, max_tested: int = 5) -> tuple[cv2.VideoCapture, int]:
-        """Prueba índices de 0 a max_tested y retorna la primera cámara que responda."""
-        print("[Camera] Buscando cámaras disponibles...")
-        for idx in range(max_tested):
-            cap = cv2.VideoCapture(idx)
-            if cap.isOpened():
-                ret, frame = cap.read()
-                if ret and frame is not None:
-                    return cap, idx
-                cap.release()
-        return None, -1
+        actual_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        actual_h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        print(f"[Camera] Conectado exitosamente a /dev/video{self.index} ({actual_w}x{actual_h})")
 
     def read(self) -> np.ndarray:
         ret, frame = self.cap.read()
         if not ret or frame is None:
-            raise RuntimeError("Error al leer frame de la cámara.")
+            raise RuntimeError("Error al capturar frame de la webcam.")
         return frame
 
     def release(self) -> None:
@@ -54,4 +39,4 @@ def save_background(path: str, frame: np.ndarray) -> None:
 
 
 def load_background(path: str) -> np.ndarray:
-    return cv2.imread(path) if cv2.os.path.exists(path) else None
+    return cv2.imread(path) if os.path.exists(path) else None
