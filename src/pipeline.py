@@ -1,6 +1,5 @@
 """
-Pipeline unificado. Pasa la máscara ya limpia al detector para evitar
-recalculos innecesarios.
+Pipeline unificado y optimizado para hardware liviano.
 """
 
 import numpy as np
@@ -11,9 +10,9 @@ from detection.contour_detector import ContourDetector
 
 
 class InventoryPipeline:
-    def __init__(self, bg_threshold: int = 25, min_area: int = 500):
+    def __init__(self, bg_threshold: int = 25, min_area: int = 400):
         self.bg_subtractor = BackgroundSubtractor(threshold=bg_threshold)
-        self.contour_detector = ContourDetector(min_area=min_area, split_touching=True)
+        self.contour_detector = ContourDetector(min_area=min_area)
 
         self.box_annotator = sv.BoxAnnotator(color_lookup=sv.ColorLookup.INDEX)
         self.mask_annotator = sv.MaskAnnotator(color_lookup=sv.ColorLookup.INDEX)
@@ -29,7 +28,7 @@ class InventoryPipeline:
         raw_mask = self.bg_subtractor.compute_mask(frame_bgr)
         clean_mask = self.contour_detector.clean_mask(raw_mask)
         
-        # Pasa directamente clean_mask para optimizar rendimiento
+        # Pasa directamente clean_mask
         detections = self.contour_detector.detect(clean_mask)
 
         annotated = frame_bgr.copy()
