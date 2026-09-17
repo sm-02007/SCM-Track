@@ -2,5 +2,5 @@ opencv-python
 numpy
 supervision
 scipy
-customtkinter
+customtkinter 
 Pillow
