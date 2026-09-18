@@ -1,0 +1,51 @@
+# ==========================================
+# DATOS DEL PROYECTO (Dataset, Fondo y Modelos)
+# ==========================================
+# Ignorar las imágenes recolectadas del dataset (mantiene la estructura de carpetas)
+data/dataset/*
+!data/dataset/.gitkeep
+
+# Ignorar la captura de fondo local de la mesa
+data/background.png
+
+# Ignorar pesos de modelos entrenados (IA)
+data/model.pth
+*.pth
+*.onnx
+*.weights
+*.h5
+
+# Ignorar archivos temporales o de depuración
+debug_mask_*.png
+*.zip
+
+# ==========================================
+# ENTORNO VIRTUAL DE PYTHON
+# ==========================================
+.venv/
+venv/
+env/
+ENV/
+bin/
+
+# ==========================================
+# CACHÉ Y ARCHIVOS TEMPORALES DE PYTHON
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# ==========================================
+# ARCHIVOS DE CONFIGURACIÓN DEL EDITOR (VS Code)
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ==========================================
+# SISTEMA OPERATIVO (Linux / Debian / macOS)
+# ==========================================
+.DS_Store
+Thumbs.db
