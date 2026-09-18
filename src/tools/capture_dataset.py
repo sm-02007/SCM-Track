@@ -42,7 +42,7 @@ CLASES = [
 BG_THRESHOLD = 25
 MIN_AREA = 400
 MAX_SINGLE_AREA = 8000
-ROI = (23, 113, 458, 480)
+ROI = (1, 1, 640, 480)
 
 
 def count_existing_images(class_name: str) -> int:
