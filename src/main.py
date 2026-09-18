@@ -6,6 +6,7 @@ Incluye esquinas redondeadas en el contenedor de video, recuadro de conteo y bot
 import os
 import sys
 import tkinter as tk
+from tkinter import ttk
 from PIL import Image, ImageTk, ImageDraw
 import cv2
 
@@ -17,8 +18,18 @@ if SRC_DIR not in sys.path:
 
 from capture.camera import Camera, load_background, save_background
 from pipeline import InventoryPipeline
+from classifier import PieceClassifier
 
 BACKGROUND_PATH = os.path.join(BASE_DIR, "data", "background.png")
+MODEL_PATH = os.path.join(BASE_DIR, "data", "model.pth")
+
+# Nombres legibles para mostrar en la tabla (clave = nombre de carpeta/clase)
+CLASS_DISPLAY_NAMES = {
+    "codo_45_1_2": "Codo 45°",
+    "codo_90_1_2": "Codo 90°",
+    "curva_90_1_2": "Curva 90°",
+    "te_1_2": "Tee",
+}
 
 # Parámetros de segmentación
 BG_THRESHOLD = 25
@@ -82,6 +93,7 @@ class AppUI:
             roi=ROI,
         )
         self.pipeline.contour_detector.update_kernels(OPEN_KSIZE, CLOSE_KSIZE)
+        self.classifier = PieceClassifier(model_path=MODEL_PATH)
 
         existing_bg = load_background(BACKGROUND_PATH)
         if existing_bg is not None:
@@ -114,36 +126,28 @@ class AppUI:
         self.right_frame = tk.Frame(self.root, bg="#FFFFFF")
         self.right_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=30)
 
-        # Título "CANTIDAD"
+        # Título "DESGLOSE"
         self.lbl_cantidad = tk.Label(
             self.right_frame,
-            text="CANTIDAD",
+            text="DESGLOSE",
             font=("Montserrat", 38, "bold"),
             fg="#F16522",
             bg="#FFFFFF"
         )
         self.lbl_cantidad.pack(anchor="center", pady=(10, 20))
 
-        # Recuadro con el contador
-        self.rect_frame = tk.Frame(
+        # Tabla de pedidos/desglose (pieza -> cantidad)
+        self.table = ttk.Treeview(
             self.right_frame,
-            bg="#FFFFFF",
-            bd=2,
-            relief="solid",
-            width=360,
-            height=180
+            columns=("pieza", "cantidad"),
+            show="headings",
+            height=8
         )
-        self.rect_frame.pack(anchor="center", pady=(0, 40))
-        self.rect_frame.pack_propagate(False)
-
-        self.lbl_counter = tk.Label(
-            self.rect_frame,
-            text="0",
-            font=("Open Sans", 72, "bold"),
-            fg="#000000",
-            bg="#FFFFFF"
-        )
-        self.lbl_counter.pack(expand=True)
+        self.table.heading("pieza", text="Pieza")
+        self.table.heading("cantidad", text="Cantidad")
+        self.table.column("pieza", width=240, anchor="w")
+        self.table.column("cantidad", width=100, anchor="center")
+        self.table.pack(anchor="center", pady=(0, 40), fill="x")
 
         # Botones inferiores redondeados
         self.btn_salida = RoundedButton(
@@ -179,17 +183,34 @@ class AppUI:
             self.pipeline.set_background(frame)
             save_background(BACKGROUND_PATH, frame)
 
+    def _update_table(self, frame, detections):
+        counts = {}
+        if detections is not None:
+            for x1, y1, x2, y2 in detections.xyxy.astype(int):
+                crop = frame[y1:y2, x1:x2]
+                if crop.size == 0:
+                    continue
+                class_name = self.classifier.predict(crop)
+                display_name = CLASS_DISPLAY_NAMES.get(class_name, class_name)
+                counts[display_name] = counts.get(display_name, 0) + 1
+
+        self.table.delete(*self.table.get_children())
+        for pieza, cantidad in counts.items():
+            self.table.insert("", "end", values=(pieza, cantidad))
+
+    def _clear_table(self):
+        self.table.delete(*self.table.get_children())
+
     def update_video(self):
         frame = self.camera.read()
 
         if frame is not None:
             if self.pipeline.has_background():
                 mask, annotated, detections = self.pipeline.process(frame)
-                num_objetos = len(detections) if detections is not None else 0
-                self.lbl_counter.config(text=str(num_objetos))
+                self._update_table(frame, detections)
                 display_frame = annotated
             else:
-                self.lbl_counter.config(text="--")
+                self._clear_table()
                 cv2.putText(
                     frame, "SIN FONDO - Presiona 'b' o RESET",
                     (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2

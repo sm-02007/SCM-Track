@@ -10,9 +10,12 @@ from detection.contour_detector import ContourDetector
 
 
 class InventoryPipeline:
-    def __init__(self, bg_threshold: int = 25, min_area: int = 400):
+    def __init__(self, bg_threshold: int = 25, min_area: int = 400,
+                 max_single_area: int = 2200, roi=None):
         self.bg_subtractor = BackgroundSubtractor(threshold=bg_threshold)
-        self.contour_detector = ContourDetector(min_area=min_area)
+        self.contour_detector = ContourDetector(
+            min_area=min_area, max_single_area=max_single_area, roi=roi
+        )
 
         self.box_annotator = sv.BoxAnnotator(color_lookup=sv.ColorLookup.INDEX)
         self.mask_annotator = sv.MaskAnnotator(color_lookup=sv.ColorLookup.INDEX)
